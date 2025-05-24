@@ -1,5 +1,4 @@
-## 赞助
-* 感谢[VTEXS](https://console.vtexs.com/?affid=1548)提供赞助优质双isp vps。
+
 
 # 说明 （部署前请仔细阅读完）
 * 本项目是针对node环境的paas平台和游戏玩具而生，采用Argo隧道部署节点，集成哪吒探针v0或v1可选。
