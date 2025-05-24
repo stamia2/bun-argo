@@ -353,25 +353,60 @@ async function generateLinks(argoDomain) {
     
     const ISP = metaInfo || 'Unknown_ISP';
     
-    // 修复字符串拼接，确保引号正确闭合
-    const subTxt = `vless://${UUID}@${CFIP}:${CFPORT}?encryption=none&security=tls&sni=${argoDomain}&type=ws&host=${argoDomain}&path=%2Fvless-argo%3Fed%3D2560#${NAME}-${ISP}\n` +
-                   `vmess://${Buffer.from(JSON.stringify({` +
-                   `v: '2',` +
-                   `ps: '${NAME}-${ISP}',` +
-                   `add: '${CFIP}',` +
-                   `port: ${CFPORT},` +
-                   `id: '${UUID}',` +
-                   `aid: '0',` +
-                   `scy: 'none',` +
-                   `net: 'ws',` +
-                   `type: 'none',` +
-                   `host: '${argoDomain}',` +
-                   `path: '/vmess-argo?ed=2560',` +
-                   `tls: 'tls',` +
-                   `sni: '${argoDomain}',` +
-                   `alpn: ''` +
-                   `})).toString('base64')}\n` +
-                   `trojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${argoDomain}&type=ws&host=${argoDomain}&path=%2Ftrojan-argo%3Fed%3D2560#${NAME}-${ISP}`;
+    // 构建完整的节点配置对象
+    const vlessConfig = {
+      id: UUID,
+      address: CFIP,
+      port: CFPORT,
+      encryption: 'none',
+      security: 'tls',
+      sni: argoDomain,
+      type: 'ws',
+      host: argoDomain,
+      path: '/vless-argo?ed=2560',
+      name: `${NAME}-${ISP}`
+    };
+    
+    const vmessConfig = {
+      v: '2',
+      ps: `${NAME}-${ISP}`,
+      add: CFIP,
+      port: CFPORT,
+      id: UUID,
+      aid: '0',
+      scy: 'none',
+      net: 'ws',
+      type: 'none',
+      host: argoDomain,
+      path: '/vmess-argo?ed=2560',
+      tls: 'tls',
+      sni: argoDomain,
+      alpn: ''
+    };
+    
+    const trojanConfig = {
+      password: UUID,
+      address: CFIP,
+      port: CFPORT,
+      security: 'tls',
+      sni: argoDomain,
+      type: 'ws',
+      host: argoDomain,
+      path: '/trojan-argo?ed=2560',
+      name: `${NAME}-${ISP}`
+    };
+    
+    // 生成完整的订阅内容
+    const subTxt = [
+      // VLESS 链接
+      `vless://${vlessConfig.id}@${vlessConfig.address}:${vlessConfig.port}?encryption=${vlessConfig.encryption}&security=${vlessConfig.security}&sni=${vlessConfig.sni}&type=${vlessConfig.type}&host=${vlessConfig.host}&path=${encodeURIComponent(vlessConfig.path)}#${encodeURIComponent(vlessConfig.name)}`,
+      
+      // VMESS 链接
+      `vmess://${Buffer.from(JSON.stringify(vmessConfig)).toString('base64')}`,
+      
+      // TROJAN 链接
+      `trojan://${trojanConfig.password}@${trojanConfig.address}:${trojanConfig.port}?security=${trojanConfig.security}&sni=${trojanConfig.sni}&type=${trojanConfig.type}&host=${trojanConfig.host}&path=${encodeURIComponent(trojanConfig.path)}#${encodeURIComponent(trojanConfig.name)}`
+    ].join('\n');
 
     // 保存节点信息
     fs.writeFileSync(subPath, Buffer.from(subTxt).toString('base64'));
