@@ -1,5 +1,5 @@
 
-
+本项目来源于eooce，仅支持bun部署。只在wispbyte上测试，其他平台未测试。
 # 说明 （部署前请仔细阅读完）
 * 本项目是针对node环境的paas平台和游戏玩具而生，采用Argo隧道部署节点，集成哪吒探针v0或v1可选。
 * node玩具平台只需上传index.js和package.json即可，paas平台需要docker部署的才上传Dockerfile。
