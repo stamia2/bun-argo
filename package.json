@@ -1,10 +1,10 @@
 {
-  "name": "nodejs-argo",
+  "name": "bun-test",
   "version": "8.8.8",
-  "description": "Thsi is a node project",
+  "description": "Thsi is a bun project",
   "main": "index.js",
-  "author": "eooce",
-  "repository": "https://github.com/eooce/nodejs-argo",
+  "author": "stamia2",
+  "repository": "https://github.com/stamia2/bun-argo",
   "license": "MIT",
   "private": false,
   "scripts": {
