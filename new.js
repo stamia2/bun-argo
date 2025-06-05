@@ -6,26 +6,20 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { execSync } from 'node:child_process';
 
-// **环境变量配置（已修正变量名规范问题）**
-const UP_URL = process.env.UP_URL || '';         // 原 UPLOAD_URL → 保留
-const P_URL = process.env.P_URL || '';         // 原 PROJECT_URL → 保留
-const AUTO_A = process.env.AUTO_A || false;     // 原 AUTO_ACCESS → 保留
-const F_PATH = process.env.F_PATH || './tmp';     // 原 FILE_PATH → 保留
-const S_PATH = process.env.S_PATH || 'sub';         // 原 SUB_PATH → 保留
+const UP_URL = process.env.UP_URL || '';       
+const P_URL = process.env.P_URL || '';         
+const AUTO_A = process.env.AUTO_A || false;     
+const F_PATH = process.env.F_PATH || './tmp';     
+const S_PATH = process.env.S_PATH || 'sub';     
 const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
 const UUID = process.env.UUID || '9afd1229-b893-40c1-84dd-51e7ce204913';
-
-// **哪吒监控相关变量**
-const N_SERVER = process.env.N_SERVER || '';     // 原 NEZHA_SERVER → 保留
-const N_PORT = process.env.N_PORT || '';         // 原 NEZHA_POR（修正拼写错误）→ NEZHA_PORT
-const N_KEY = process.env.N_KEY || '';           // 原 NEZHA_KEY → 保留
-
-// **ERGOU（原 ARGO）相关变量**
-const ERGOU_DOMAIN = process.env.ERGOU_DOMAIN || ''; // 原 ARGO_DOMAIN → 改为 ERGOU_DOMAIN
-const ERGOU_AUTH = process.env.ERGOU_AUTH || '';     // 原 ARGO_AUTH → 改为 ERGOU_AUTH
-const ERGOU_PORT = process.env.ERGOU_PORT || 8001;   // 原 ARGO_PORT → 改为 ERGOU_PORT
-
-const CFIP = process.env.CFIP || 'www.visa.com.sg';
+const N_SERVER = process.env.N_SERVER || '';  
+const N_PORT = process.env.N_PORT || '';        
+const N_KEY = process.env.N_KEY || '';          
+const ERGOU_DOMAIN = process.env.ERGOU_DOMAIN || ''; 
+const ERGOU_AUTH = process.env.ERGOU_AUTH || '';     
+const ERGOU_PORT = process.env.ERGOU_PORT || 8001;   
+const CFIP = process.env.CFIP || 'ip.sb';
 const CFPORT = process.env.CFPORT || 443;
 const NAME = process.env.NAME || 'Vls';
 
