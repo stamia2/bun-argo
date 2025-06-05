@@ -4,9 +4,8 @@ import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
-import { execSync } from 'node:child_process';
 
-// 环境变量配置（全部修改为合法标识符）
+// 环境变量配置（全部修改为合法标识符并保持一致性）
 const UP_URL = process.env.UP_URL || '';
 const P_URL = process.env.P_URL || '';
 const AUTO_A = process.env.AUTO_A || false;
@@ -20,7 +19,7 @@ const N_KEY = process.env.N_KEY || '';
 const ERGOU_DOMAIN = process.env.ERGOU_DOMAIN || '';
 const ERGOU_AUTH = process.env.ERGOU_AUTH || '';
 const ERGOU_PORT = process.env.ERGOU_PORT || 8001;
-const CFIP = process.env.CFIP || 'ip.sb';
+const CFIP = process.env.CFIP || 'www.visa.com.sg';
 const CFPORT = process.env.CFPORT || 443;
 const NAME = process.env.NAME || 'Vls';
 
@@ -280,3 +279,27 @@ ingress:
     fs.writeFileSync(path.join(F_PATH, 'tunnel.yml'), tunnelYaml);
   } else {
     console.log("ERGOU_AUTH 不是有效的 TunnelSecret，使用 token 连接隧道");
+  }
+}
+
+// 启动应用
+async function startApp() {
+  try {
+    console.log("应用启动中...");
+    cleanupOldFiles();
+    await deleteNodes();
+    await downloadFilesAndRun();
+    argoType();
+    
+    // 启动 Express 服务器
+    app.listen(PORT, () => {
+      console.log(`服务器运行在端口 ${PORT}`);
+    });
+  } catch (error) {
+    console.error("应用启动失败:", error);
+    process.exit(1);
+  }
+}
+
+// 执行启动
+startApp();
