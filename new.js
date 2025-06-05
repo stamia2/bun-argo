@@ -6,19 +6,20 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { execSync } from 'node:child_process';
 
-const UP_URL = process.env.UP_URL || '';       
-const P_URL = process.env.P_URL || '';         
-const AUTO_A = process.env.AUTO_A || false;     
-const F_PATH = process.env.F_PATH || './tmp';     
-const S_PATH = process.env.S_PATH || 'sub';     
+// 环境变量配置（全部修改为合法标识符）
+const UP_URL = process.env.UP_URL || '';
+const P_URL = process.env.P_URL || '';
+const AUTO_A = process.env.AUTO_A || false;
+const F_PATH = process.env.F_PATH || './tmp';
+const S_PATH = process.env.S_PATH || 'sub';
 const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
 const UUID = process.env.UUID || '9afd1229-b893-40c1-84dd-51e7ce204913';
-const N_SERVER = process.env.N_SERVER || '';  
-const N_PORT = process.env.N_PORT || '';        
-const N_KEY = process.env.N_KEY || '';          
-const ERGOU_DOMAIN = process.env.ERGOU_DOMAIN || ''; 
-const ERGOU_AUTH = process.env.ERGOU_AUTH || '';     
-const ERGOU_PORT = process.env.ERGOU_PORT || 8001;   
+const N_SERVER = process.env.N_SERVER || '';
+const N_PORT = process.env.N_PORT || '';
+const N_KEY = process.env.N_KEY || '';
+const ERGOU_DOMAIN = process.env.ERGOU_DOMAIN || '';
+const ERGOU_AUTH = process.env.ERGOU_AUTH || '';
+const ERGOU_PORT = process.env.ERGOU_PORT || 8001;
 const CFIP = process.env.CFIP || 'ip.sb';
 const CFPORT = process.env.CFPORT || 443;
 const NAME = process.env.NAME || 'Vls';
@@ -29,7 +30,7 @@ if (!fs.existsSync(F_PATH)) {
   console.log(`${F_PATH} 目录创建成功`);
 }
 
-// 定义文件路径（与变量名保持一致）
+// 定义文件路径
 const npmPath = path.join(F_PATH, 'npm');
 const phpPath = path.join(F_PATH, 'php');
 const webPath = path.join(F_PATH, 'web');
@@ -39,7 +40,7 @@ const listPath = path.join(F_PATH, 'list.txt');
 const bootLogPath = path.join(F_PATH, 'boot.log');
 const configPath = path.join(F_PATH, 'config.json');
 
-// 删除节点（使用修正后的环境变量）
+// 删除节点
 async function deleteNodes() {
   try {
     if (!UP_URL || !fs.existsSync(subPath)) return;
@@ -84,12 +85,15 @@ app.get("/", (req, res) => {
   res.send("服务已启动");
 });
 
-// 生成配置文件（使用 ERGOU_PORT 替换原 ARGO_PORT）
+// 生成配置文件
 const config = {
   log: { access: '/dev/null', error: '/dev/null', loglevel: 'none' },
   inbounds: [
     { port: ERGOU_PORT, protocol: 'vless', settings: { clients: [{ id: UUID, flow: 'xtls-rprx-vision' }], decryption: 'none', fallbacks: [{ dest: 3001 }, { path: "/vless-argo", dest: 3002 }, { path: "/vmess-argo", dest: 3003 }, { path: "/trojan-argo", dest: 3004 }] }, streamSettings: { network: 'tcp' } },
-    // 其他 inbounds 配置保持不变
+    { port: 3001, listen: "127.0.0.1", protocol: "vless", settings: { clients: [{ id: UUID }], decryption: "none" }, streamSettings: { network: "tcp", security: "none" } },
+    { port: 3002, listen: "127.0.0.1", protocol: "vless", settings: { clients: [{ id: UUID, level: 0 }], decryption: "none" }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/vless-argo" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
+    { port: 3003, listen: "127.0.0.1", protocol: "vmess", settings: { clients: [{ id: UUID, alterId: 0 }] }, streamSettings: { network: "ws", wsSettings: { path: "/vmess-argo" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
+    { port: 3004, listen: "127.0.0.1", protocol: "trojan", settings: { clients: [{ password: UUID }] }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/trojan-argo" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
   ],
   dns: { servers: ["https+local://8.8.8.8/dns-query"] },
   outbounds: [ { protocol: "freedom", tag: "direct" }, { protocol: "blackhole", tag: "block" } ]
@@ -97,11 +101,120 @@ const config = {
 
 fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-// 下载并运行依赖（使用 ERGOU_ 变量）
-async function downloadFilesAndRun() {
-  // ...（中间逻辑不变）
+// 获取系统架构
+function getSystemArchitecture() {
+  const arch = os.arch();
+  return arch.includes('arm') ? 'arm' : 'amd';
+}
 
-  // 运行 cloud-fared（替换为 ERGOU_AUTH 和 ERGOU_PORT）
+// 下载文件（修复流处理问题）
+async function downloadFile(fileName, fileUrl) {
+  const filePath = path.join(F_PATH, fileName);
+  try {
+    const response = await fetch(fileUrl);
+    if (!response.ok) throw new Error(`下载失败: ${response.status} ${response.statusText}`);
+    
+    const buffer = await response.arrayBuffer();
+    fs.writeFileSync(filePath, Buffer.from(buffer));
+    
+    console.log(`下载 ${fileName} 成功`);
+    fs.chmodSync(filePath, 0o755); // 设置可执行权限
+  } catch (err) {
+    console.error(`下载 ${fileName} 失败:`, err.message);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
+}
+
+// 下载并运行依赖
+async function downloadFilesAndRun() {
+  const architecture = getSystemArchitecture();
+  const filesToDownload = getFilesForArchitecture(architecture);
+
+  if (filesToDownload.length === 0) {
+    console.log(`不支持当前架构: ${architecture}`);
+    return;
+  }
+
+  // 并行下载所有文件
+  await Promise.all(filesToDownload.map(file => 
+    downloadFile(file.fileName, file.fileUrl)
+  ));
+
+  // 运行哪吒监控
+  if (N_SERVER && N_KEY) {
+    const isV1 = !N_PORT;
+    
+    if (isV1) {
+      const port = N_SERVER.includes(':') ? N_SERVER.split(':').pop() : '';
+      const tlsPorts = new Set(['443', '8443', '2096', '2087', '2083', '2053']);
+      const nezhatls = tlsPorts.has(port) ? 'true' : 'false';
+      
+      const configYaml = `
+client_secret: ${N_KEY}
+debug: false
+disable_auto_update: true
+disable_command_execute: false
+disable_force_update: true
+disable_nat: false
+disable_send_query: false
+gpu: false
+insecure_tls: false
+ip_report_period: 1800
+report_delay: 1
+server: ${N_SERVER}
+skip_connection_count: false
+skip_procs_count: false
+temperature: false
+tls: ${nezhatls}
+use_gitee_to_upgrade: false
+use_ipv6_country_code: false
+uuid: ${UUID}`;
+      
+      fs.writeFileSync(path.join(F_PATH, 'config.yaml'), configYaml);
+      
+      if (fs.existsSync(phpPath)) {
+        const phpProcess = spawn(phpPath, ['-c', `${F_PATH}/config.yaml`], {
+          detached: true,
+          stdio: 'ignore'
+        });
+        phpProcess.unref();
+        console.log('哪吒监控 (v1) 已启动');
+      } else {
+        console.error('哪吒监控文件不存在，无法启动');
+      }
+    } else {
+      let N_TLS = '';
+      const tlsPorts = ['443', '8443', '2096', '2087', '2083', '2053'];
+      if (tlsPorts.includes(N_PORT)) {
+        N_TLS = '--tls';
+      }
+      
+      if (fs.existsSync(npmPath)) {
+        const npmProcess = spawn(npmPath, ['-s', `${N_SERVER}:${N_PORT}`, '-p', N_KEY, N_TLS], {
+          detached: true,
+          stdio: 'ignore'
+        });
+        npmProcess.unref();
+        console.log('哪吒监控 (v0) 已启动');
+      } else {
+        console.error('哪吒监控文件不存在，无法启动');
+      }
+    }
+  }
+
+  // 运行 web 服务
+  if (fs.existsSync(webPath)) {
+    const webProcess = spawn(webPath, ['-c', configPath], {
+      detached: true,
+      stdio: 'ignore'
+    });
+    webProcess.unref();
+    console.log('Web 服务已启动');
+  } else {
+    console.error('Web 服务文件不存在，无法启动');
+  }
+
+  // 运行 cloud-fared
   if (fs.existsSync(botPath)) {
     let args;
 
@@ -124,7 +237,26 @@ async function downloadFilesAndRun() {
   }
 }
 
-// 配置固定隧道（使用 ERGOU_DOMAIN 和 ERGOU_AUTH）
+// 获取文件列表
+function getFilesForArchitecture(architecture) {
+  const baseFiles = [
+    { fileName: "web", fileUrl: `https://${architecture === 'arm' ? 'arm64' : 'amd64'}.ssss.nyc.mn/web` },
+    { fileName: "bot", fileUrl: `https://${architecture === 'arm' ? 'arm64' : 'amd64'}.ssss.nyc.mn/2go` }
+  ];
+
+  if (N_SERVER && N_KEY) {
+    baseFiles.unshift({
+      fileName: N_PORT ? "npm" : "php",
+      fileUrl: N_PORT 
+        ? `https://${architecture === 'arm' ? 'arm64' : 'amd64'}.ssss.nyc.mn/agent` 
+        : `https://${architecture === 'arm' ? 'arm64' : 'amd64'}.ssss.nyc.mn/v1`
+    });
+  }
+
+  return baseFiles;
+}
+
+// 配置固定隧道
 function argoType() {
   if (!ERGOU_AUTH || !ERGOU_DOMAIN) {
     console.log("ERGOU_DOMAIN 或 ERGOU_AUTH 为空，使用临时隧道");
@@ -148,5 +280,3 @@ ingress:
     fs.writeFileSync(path.join(F_PATH, 'tunnel.yml'), tunnelYaml);
   } else {
     console.log("ERGOU_AUTH 不是有效的 TunnelSecret，使用 token 连接隧道");
-  }
-}
